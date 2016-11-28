@@ -1,0 +1,12 @@
+{
+  "require": {
+      "silex/silex": "~2.0",
+      "predis/predis": "^1.1",
+    "guzzlehttp/guzzle": "^6.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "Baboon\\": "src/"
+    }
+  }
+}
