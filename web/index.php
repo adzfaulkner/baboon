@@ -1,10 +1,11 @@
 <?php
 require_once __DIR__ . '/../app/bootstrap.php';
 
-$app->get('/', function () {
+$prefix = substr($_SERVER['REQUEST_URI'], 8) === '/baboon/' ? '/baboon' : '';
+
+$app->get($prefix . '/', function () {
     return null;
 });
 
-$app->get('/music', 'controller.music:getAction');
-
+$app->get($prefix . '/music', 'controller.music:getAction');
 $app->run();
