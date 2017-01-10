@@ -25,52 +25,49 @@ class Cache
     public function __construct(PredisClient $predisClient)
     {
         $this->predisClient = $predisClient;
+        $this->predisClient->flushdb();
     }
 
     /**
-     * @param string $query
-     * @param int $limit
+     * @param array $params
      * @return mixed
      */
-    public function getList($query, $limit)
+    public function getList(array $params)
     {
         return \json_decode($this->predisClient->get(
-            $this->generateListKey($query, $limit)
+            $this->generateListKey($params)
         ), true);
     }
 
     /**
-     * @param string $query
-     * @param int $limit
+     * @param array $params
      * @param mixed $value
      */
-    public function setList($query, $limit, $value)
+    public function setList(array $params, $value)
     {
         $this->predisClient->set(
-            $this->generateListKey($query, $limit),
+            $this->generateListKey($params),
             \json_encode($value)
         );
     }
 
     /**
-     * @param string $query
-     * @param int $limit
+     * @param array $params
      * @return \DateTime
      */
-    public function getListDate($query, $limit)
+    public function getListDate(array $params)
     {
-        return unserialize($this->predisClient->get($this->generateListDateKey($query, $limit)));
+        return unserialize($this->predisClient->get($this->generateListDateKey($params)));
     }
 
     /**
-     * @param string $query
-     * @param int $limit
+     * @param array $params
      * @param \DateTime $dateTime
      */
-    public function setListDate($query, $limit, \DateTime $dateTime)
+    public function setListDate(array $params, \DateTime $dateTime)
     {
         $this->predisClient->set(
-            $this->generateListDateKey($query, $limit),
+            $this->generateListDateKey($params),
             serialize($dateTime)
         );
     }
@@ -122,25 +119,27 @@ class Cache
     }
 
     /**
-     * @param string $query
-     * @param int $limit
+     * @param array $params
      * @return string
      */
-    private function generateListKey($query, $limit)
+    private function generateListKey(array $params)
     {
-        return $this->generateKey([self::CACHE_ALBUM_KEY, base64_encode($query . $limit)]);
+        ksort($params);
+        return $this->generateKey([
+            self::CACHE_ALBUM_KEY,
+            base64_encode(http_build_query($params))
+        ]);
     }
 
     /**
-     * @param string $query
-     * @param int $limit
+     * @param array $params
      * @return string
      */
-    private function generateListDateKey($query, $limit)
+    private function generateListDateKey(array $params)
     {
         return implode(
             '/', [
-            $this->generateListKey($query, $limit),
+            $this->generateListKey($params),
             self::CACHE_DATECREATED_KEY
         ]);
     }

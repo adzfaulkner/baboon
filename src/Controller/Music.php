@@ -36,10 +36,9 @@ class Music
     public function getAction()
     {
         $currentRequest = $this->requestStack->getCurrentRequest();
-        $query = $currentRequest->get('query');
-        $limit = (int) $currentRequest->get('limit', 10);
+        $params = $currentRequest->query->all();
 
-        return new JsonResponse($this->musicSevice->getMusicList($query, $limit));
+        return new JsonResponse($this->musicSevice->getMusicList($params));
     }
 
 }

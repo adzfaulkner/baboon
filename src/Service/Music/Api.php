@@ -21,15 +21,18 @@ class Api
     }
 
     /**
-     * @param string $query
-     * @param int $limit
+     * @param array $params
      * @return mixed
      */
-    public function getList($query, $limit)
+    public function getList(array $params)
     {
+        $params['fmt'] = 'json';
+
+        $qryStr = http_build_query($params);
+
         $result = $this->guzzleClient->request(
             'GET',
-            'http://musicbrainz.org/ws/2/release/?query=' . $query. '&fmt=json&limit=' . $limit
+            'http://musicbrainz.org/ws/2/release/?' . $qryStr
         );
 
         return \json_decode($result->getBody()->getContents(), true);

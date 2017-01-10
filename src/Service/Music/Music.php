@@ -34,13 +34,17 @@ class Music
     }
 
     /**
-     * @param string $query
-     * @param int $limit
+     * @param array $params
      * @return array
      */
-    public function getMusicList($query, $limit)
+    public function getMusicList(array $params)
     {
-        $releases = $this->getList($query, $limit);
+        if (empty($params['limit']) === true) {
+            $params['limit'] = 10;
+        }
+
+        $releases = $this->getList($params);
+
         $data = [];
         foreach ($releases as $album) {
             $artwork = $this->getArtwork($album['id']);
@@ -51,29 +55,28 @@ class Music
     }
 
     /**
-     * @param string $query
-     * @param int $limit
+     * @param array $params
      * @param int $attempt
      * @return mixed
      */
-    private function getList($query, $limit, $attempt = 1)
+    private function getList(array $params, $attempt = 1)
     {
-        $getFromApi = function () use ($query, $limit) {
-            $result = $this->getListFromAPI($query, $limit)['releases'];
-            $this->setListCached($query, $limit, $result, new DateTime());
+        $getFromApi = function () use ($params) {
+            $result = $this->getListFromAPI($params)['releases'];
+            $this->setListCached($params, $result, new DateTime());
             return $result;
         };
 
-        $getFromCache = function () use ($query, $limit) {
-            if ($this->hasListCacheExpired($query, $limit) === true) {
+        $getFromCache = function () use ($params) {
+            if ($this->hasListCacheExpired($params) === true) {
                 return null;
             }
 
-            return $this->getListCachedValue($query, $limit)['releases'];
+            return $this->getListCachedValue($params)['releases'];
         };
 
-        $tryAgainApi = function () use ($query, $limit, $attempt) {
-            $this->getList($query, $limit, ++$attempt);
+        $tryAgainApi = function () use ($params, $attempt) {
+            $this->getList($params, ++$attempt);
         };
 
         return $this->getData($getFromApi, $getFromCache, $tryAgainApi, $attempt);
@@ -125,6 +128,10 @@ class Music
 
             return $apiCall();
         } catch (RequestException $e) {
+            if ($e->getResponse()->getStatusCode() === 400) {
+                throw $e;
+            }
+
             if ($attempt > self::REQUEST_MAX_ATTEMPTS || $e->getResponse()->getStatusCode() === 404) {
                 return null;
             }
@@ -140,13 +147,12 @@ class Music
     }
 
     /**
-     * @param string $query
-     * @param int $limit
+     * @param array $params
      * @return mixed
      */
-    private function getListFromAPI($query, $limit)
+    private function getListFromAPI(array $params)
     {
-        return $this->apiService->getList($query, $limit);
+        return $this->apiService->getList($params);
     }
 
     /**
@@ -214,35 +220,32 @@ class Music
     }
 
     /**
-     * @param string $query
-     * @param int $limit
+     * @param array $params
      * @param mixed $releases
      * @param DateTime $dateTime
      */
-    private function setListCached($query, $limit, $releases, DateTime $dateTime)
+    private function setListCached(array $params, $releases, DateTime $dateTime)
     {
-        $this->setListCachedValue($query, $limit, $releases);
-        $this->setListCachedDate($query, $limit, $dateTime);
+        $this->setListCachedValue($params, $releases);
+        $this->setListCachedDate($params, $dateTime);
     }
 
     /**
-     * @param string $query
-     * @param int $limit
+     * @param array $params
      * @return mixed
      */
-    private function getListCachedValue($query, $limit)
+    private function getListCachedValue(array $params)
     {
-        return $this->cacheService->getList($query, $limit);
+        return $this->cacheService->getList($params);
     }
 
     /**
-     * @param string $query
-     * @param int $limit
+     * @param array $params
      * @param mixed $value
      */
-    private function setListCachedValue($query, $limit, $value)
+    private function setListCachedValue(array $params, $value)
     {
-        $this->cacheService->setList($query, $limit, $value);
+        $this->cacheService->setList($params, $value);
     }
 
     /**
@@ -264,48 +267,44 @@ class Music
     }
 
     /**
-     * @param string $query
-     * @param int $limit
+     * @param array $params
      * @return DateTime
      */
-    private function getListCachedDate($query, $limit)
+    private function getListCachedDate(array $params)
     {
-        return $this->cacheService->getListDate($query, $limit);
+        return $this->cacheService->getListDate($params);
     }
 
     /**
-     * @param string $query
-     * @param int $limit
+     * @param array $params
      * @param DateTime $dateTime
      */
-    private function setListCachedDate($query, $limit, DateTime $dateTime)
+    private function setListCachedDate(array $params, DateTime $dateTime)
     {
-        $this->cacheService->setListDate($query, $limit, $dateTime);
+        $this->cacheService->setListDate($params, $dateTime);
     }
 
     /**
-     * @param $query
-     * @param $limit
+     * @param array $params
      * @return bool
      */
-    private function isListCached($query, $limit)
+    private function isListCached(array $params)
     {
-        return empty($this->getListCachedDate($query, $limit)) === false;
+        return empty($this->getListCachedDate($params)) === false;
     }
 
     /**
-     * @param $query
-     * @param $limit
+     * @param array $params
      * @return bool
      */
-    private function hasListCacheExpired($query, $limit)
+    private function hasListCacheExpired(array $params)
     {
-        $is = function () use ($query, $limit) {
-            return $this->isListCached($query, $limit);
+        $is = function () use ($params) {
+            return $this->isListCached($params);
         };
 
-        $getDate = function () use ($query, $limit) {
-            return $this->getListCachedDate($query, $limit);
+        $getDate = function () use ($params) {
+            return $this->getListCachedDate($params);
         };
 
         return $this->checkCache($is, $getDate);
